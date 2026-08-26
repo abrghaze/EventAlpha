@@ -1,0 +1,31 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "eventalpha-api"
+version = "0.1.0"
+description = "Event-driven trading intelligence research platform"
+requires-python = ">=3.11"
+dependencies = [
+  "fastapi>=0.115,<1",
+  "pydantic>=2.7,<3",
+  "uvicorn[standard]>=0.30,<1",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=8,<9", "ruff>=0.6,<1", "mypy>=1.11,<2"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["services/api"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+src = ["services/api", "tests"]
+
+[tool.mypy]
+python_version = "3.11"
+strict = true
+files = ["services/api/app"]

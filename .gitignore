@@ -1,0 +1,39 @@
+# Secrets and local configuration
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Python
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+
+# Node / Next
+node_modules/
+.next/
+out/
+coverage/
+
+# Local runtime data and artifacts
+data/
+artifacts/
+logs/
+*.log
+*.db
+*.sqlite*
+*.parquet
+*.duckdb
+
+# Tooling / OS
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
