@@ -12,6 +12,7 @@ Updated: 2026-08-26
 - Phase 1 verification passed: 9 Python tests; API behavior checks; replay worker refresh for ACME/SPY; and Next.js production build with route/type generation.
 - Completed the Phase 2 event-ingestion foundation: timestamped/licensing-aware raw envelopes, provider-neutral event adapter, deterministic normalisation, content fingerprinting, native-ID idempotency, exact/near-title clustering, canonical-event/mention contracts, replay event worker, event APIs, and Event Radar.
 - Phase 2 foundation verification passed: 13 Python tests; three replay source items formed two canonical events with the syndicated earnings item clustered into two mentions; and the Next.js production build generated seven routes.
+- The first remote CI run identified CI configuration issues: ambiguous setuptools monorepo discovery and a secret-scan base equal to HEAD. Package discovery is now explicitly scoped to `services/api`, the scan uses the event-derived commit range, and CI now includes a clean npm dashboard build.
 - Enforced Phase 0 safety: live configuration raises at startup and replay makes no provider, OpenAI or broker calls.
 
 ## In progress
