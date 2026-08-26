@@ -4,7 +4,7 @@ EventAlpha is an evidence-driven, event-based trading intelligence and research 
 
 ## Current milestone
 
-Phase 0 is implemented: architecture decision records, repository hygiene, typed FastAPI contracts, a safe replay-only event-to-signal-to-risk vertical slice, tests, Docker Compose setup, a Next.js shell, and CI.
+Phases 0 and 1 are implemented: architecture decision records, repository hygiene, typed FastAPI contracts, a safe replay-only event-to-signal-to-risk vertical slice, provider-neutral market-data contracts, typed replay bars/quotes, provider-freshness health, worker entry point, dashboard views, tests, Docker Compose setup, and CI.
 
 Live trading is unsupported. Setting `EVENTALPHA_LIVE_TRADING_ENABLED=true` makes the API fail fast.
 
@@ -15,6 +15,8 @@ Live trading is unsupported. Setting `EVENTALPHA_LIVE_TRADING_ENABLED=true` make
 3. Run tests: `pytest`.
 4. Start the API: `uvicorn app.main:app --app-dir services/api --reload`.
 5. Check `http://127.0.0.1:8000/api/v1/health` and `http://127.0.0.1:8000/api/v1/signals`.
+
+The replay market endpoints are `GET /api/v1/assets/ACME/bars`, `GET /api/v1/assets/ACME/snapshot`, and `GET /api/v1/providers/health`. They explicitly return `source: replay`; they are not live market data.
 
 Docker Compose is available after installing Docker: `docker compose up --build`.
 

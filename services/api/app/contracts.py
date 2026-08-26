@@ -25,6 +25,46 @@ class Direction(StrEnum):
     UNCERTAIN = "uncertain"
 
 
+class ProviderStatus(StrEnum):
+    HEALTHY = "healthy"
+    DEGRADED = "degraded"
+    UNAVAILABLE = "unavailable"
+
+
+class MarketBar(BaseModel):
+    """Provider-neutral OHLCV bar; all timestamps are UTC-aware at boundaries."""
+
+    model_config = ConfigDict(frozen=True)
+    symbol: str = Field(pattern=r"^[A-Z.]{1,12}$")
+    timeframe: Literal["1m", "5m", "15m", "1h", "1d"]
+    timestamp: datetime
+    open: Decimal = Field(gt=0)
+    high: Decimal = Field(gt=0)
+    low: Decimal = Field(gt=0)
+    close: Decimal = Field(gt=0)
+    volume: int = Field(ge=0)
+
+
+class MarketQuote(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    symbol: str = Field(pattern=r"^[A-Z.]{1,12}$")
+    bid: Decimal = Field(gt=0)
+    ask: Decimal = Field(gt=0)
+    last: Decimal = Field(gt=0)
+    provider_timestamp: datetime
+    received_at: datetime
+    provider: str
+
+
+class ProviderHealth(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    name: str
+    status: ProviderStatus
+    last_message_at: datetime | None
+    freshness_ms: int | None = Field(default=None, ge=0)
+    detail: str | None = None
+
+
 class EventEntity(BaseModel):
     model_config = ConfigDict(frozen=True)
     entity_id: str
