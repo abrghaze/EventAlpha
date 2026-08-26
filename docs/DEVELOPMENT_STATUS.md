@@ -12,7 +12,7 @@ Updated: 2026-08-26
 
 ## In progress
 
-- Verifying Phase 0 and initializing the repository.
+- Phase 1 has not started. The Phase 0 checkpoint is locally committed and ready for review.
 
 ## Remaining
 
@@ -22,7 +22,7 @@ Updated: 2026-08-26
 
 - Docker CLI is absent on this machine, so Compose cannot be run here.
 - Credentials, licences, budgets, cloud and identity choices are absent by design and not Phase 0 blockers.
-- No Git repository existed before this milestone.
+- The GitHub push has not occurred because this environment requires a further explicit approval before uploading the complete proprietary project pack to the remote.
 
 ## Next milestone
 
