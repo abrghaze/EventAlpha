@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+from uuid import UUID
+
 from fastapi import FastAPI, HTTPException, WebSocket
 
 from app.config import Settings
+from app.events.replay import ReplayEventBootstrap
+from app.events.service import EventService
 from app.market.service import MarketDataService
 from app.providers.replay_market import ReplayMarketDataProvider
 from app.replay import demo_signal
@@ -10,6 +14,8 @@ from app.replay import demo_signal
 settings = Settings.from_environment()
 app = FastAPI(title="EventAlpha API", version="0.1.0")
 market_data = MarketDataService(ReplayMarketDataProvider())
+events = EventService()
+event_bootstrap = ReplayEventBootstrap(events)
 
 
 @app.get("/api/v1/health")
@@ -26,6 +32,21 @@ async def provider_health() -> dict[str, object]:
 @app.get("/api/v1/signals")
 def signals() -> dict[str, object]:
     return {"data": [demo_signal(settings).model_dump(mode="json")], "source": "replay"}
+
+
+@app.get("/api/v1/events")
+async def list_events() -> dict[str, object]:
+    await event_bootstrap.ensure_loaded()
+    return {"data": [event.model_dump(mode="json") for event in events.list_events()], "source": "replay"}
+
+
+@app.get("/api/v1/events/{event_id}")
+async def get_event(event_id: UUID) -> dict[str, object]:
+    await event_bootstrap.ensure_loaded()
+    event = events.get_event(event_id)
+    if event is None:
+        raise HTTPException(status_code=404, detail="Unknown event")
+    return {"data": event.model_dump(mode="json"), "source": "replay"}
 
 
 @app.get("/api/v1/assets/{symbol}/snapshot")

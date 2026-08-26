@@ -31,6 +31,55 @@ class ProviderStatus(StrEnum):
     UNAVAILABLE = "unavailable"
 
 
+class StoragePolicy(StrEnum):
+    METADATA_AND_DERIVED_ONLY = "metadata_and_derived_only"
+    LICENSED_RAW_ARCHIVE = "licensed_raw_archive"
+
+
+class RawEnvelope(BaseModel):
+    """Normalized source item with preserved availability timestamps."""
+
+    model_config = ConfigDict(frozen=True)
+    id: UUID = Field(default_factory=uuid4)
+    trace_id: UUID = Field(default_factory=uuid4)
+    provider: str
+    source_id: str
+    native_id: str | None = None
+    event_time: datetime | None = None
+    published_at: datetime | None = None
+    received_at: datetime
+    title: str = Field(min_length=1, max_length=1000)
+    content: str = Field(min_length=1, max_length=10000)
+    url: str = Field(min_length=1, max_length=2000)
+    language: str = Field(min_length=2, max_length=10)
+    category: str = Field(min_length=1, max_length=100)
+    content_hash: str = Field(pattern=r"^[a-f0-9]{64}$")
+    storage_policy: StoragePolicy
+
+
+class EventMention(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    raw_item_id: UUID
+    source_id: str
+    published_at: datetime | None
+    received_at: datetime
+
+
+class CanonicalEvent(BaseModel):
+    model_config = ConfigDict(frozen=True)
+    event_id: UUID = Field(default_factory=uuid4)
+    event_version: int = Field(ge=1)
+    canonical_title: str
+    event_type: str
+    event_time: datetime | None
+    first_received_at: datetime
+    last_updated_at: datetime
+    language: str
+    novelty: float = Field(ge=0, le=1)
+    source_independence: float = Field(ge=0, le=1)
+    mentions: tuple[EventMention, ...]
+
+
 class MarketBar(BaseModel):
     """Provider-neutral OHLCV bar; all timestamps are UTC-aware at boundaries."""
 

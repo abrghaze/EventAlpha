@@ -1,0 +1,1 @@
+"""News/event provider adapters."""
