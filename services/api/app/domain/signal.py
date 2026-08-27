@@ -3,7 +3,7 @@ from __future__ import annotations
 from datetime import timedelta
 from math import tanh
 
-from app.contracts import AIEventAnalysis, Action, FeatureSnapshot, SignalCandidate
+from app.contracts import Action, AIEventAnalysis, FeatureSnapshot, SignalCandidate
 
 
 def _action(score: float, probability: float) -> Action:

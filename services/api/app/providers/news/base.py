@@ -1,14 +1,14 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from typing import Protocol
 
 from app.contracts import RawEnvelope
 
 
-class NewsProvider:
+class NewsProvider(Protocol):
     """Common contract for licensed news, official sources, SEC and macro adapters."""
 
     name: str
 
-    async def stream_items(self) -> AsyncIterator[RawEnvelope]:
-        raise NotImplementedError
+    def stream_items(self) -> AsyncIterator[RawEnvelope]: ...

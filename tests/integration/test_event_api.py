@@ -12,6 +12,10 @@ def test_event_api_returns_clustered_replay_events() -> None:
     acme = next(event for event in events if event["event_type"] == "earnings")
     assert len(acme["mentions"]) == 2
     assert client.get(f"/api/v1/events/{acme['event_id']}").status_code == 200
+    historical = client.get(f"/api/v1/events/{acme['event_id']}/versions/1")
+    assert historical.status_code == 200
+    assert len(historical.json()["data"]["mentions"]) == 1
+    assert client.get(f"/api/v1/events/{acme['event_id']}/versions/3").status_code == 404
 
 
 def test_event_api_rejects_unknown_event() -> None:

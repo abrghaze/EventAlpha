@@ -1,4 +1,4 @@
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from uuid import uuid4
 
 from app.config import Settings
@@ -9,18 +9,40 @@ from app.domain.signal import create_candidate
 
 def _analysis() -> AIEventAnalysis:
     return AIEventAnalysis(
-        event_id=uuid4(), model="fixture", prompt_version="v1", event_type="earnings",
-        summary="Positive guidance", importance=0.8, novelty=0.8, uncertainty=0.1,
-        entities=(EventEntity(entity_id="acme", ticker="ACME", direction=Direction.BULLISH,
-                              impact=0.9, confidence=0.9, horizons=("4h",)),),
-        evidence_source_ids=("source-1",), explanation="Fixture.",
+        event_id=uuid4(),
+        model="fixture",
+        prompt_version="v1",
+        event_type="earnings",
+        summary="Positive guidance",
+        importance=0.8,
+        novelty=0.8,
+        uncertainty=0.1,
+        entities=(
+            EventEntity(
+                entity_id="acme",
+                ticker="ACME",
+                direction=Direction.BULLISH,
+                impact=0.9,
+                confidence=0.9,
+                horizons=("4h",),
+            ),
+        ),
+        evidence_source_ids=("source-1",),
+        explanation="Fixture.",
     )
 
 
 def _features(**overrides: object) -> FeatureSnapshot:
-    values: dict[str, object] = {"symbol": "ACME", "as_of": datetime.now(timezone.utc),
-        "feature_set_version": "v1", "ret_15m": 0.03, "realized_vol_30m": 0.02,
-        "volume_z_30m": 2.0, "sector_relative_ret_15m": 0.01, "market_data_age_ms": 30}
+    values: dict[str, object] = {
+        "symbol": "ACME",
+        "as_of": datetime.now(UTC),
+        "feature_set_version": "v1",
+        "ret_15m": 0.03,
+        "realized_vol_30m": 0.02,
+        "volume_z_30m": 2.0,
+        "sector_relative_ret_15m": 0.01,
+        "market_data_age_ms": 30,
+    }
     values.update(overrides)
     return FeatureSnapshot(**values)
 

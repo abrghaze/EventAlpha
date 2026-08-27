@@ -1,12 +1,21 @@
 from __future__ import annotations
 
-from datetime import datetime
+from datetime import UTC, datetime
 from decimal import Decimal
 from enum import StrEnum
-from typing import Literal
+from typing import Annotated, Literal
 from uuid import UUID, uuid4
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field
+
+
+def _as_utc(value: datetime) -> datetime:
+    if value.tzinfo is None or value.utcoffset() is None:
+        raise ValueError("timestamp must include a timezone")
+    return value.astimezone(UTC)
+
+
+UtcDatetime = Annotated[datetime, AfterValidator(_as_utc)]
 
 
 class Action(StrEnum):
@@ -44,10 +53,13 @@ class RawEnvelope(BaseModel):
     trace_id: UUID = Field(default_factory=uuid4)
     provider: str
     source_id: str
+    source_type: str = Field(default="unspecified", min_length=1, max_length=100)
+    source_credibility_prior: float = Field(default=0.5, ge=0, le=1)
     native_id: str | None = None
-    event_time: datetime | None = None
-    published_at: datetime | None = None
-    received_at: datetime
+    event_time: UtcDatetime | None = None
+    published_at: UtcDatetime | None = None
+    received_at: UtcDatetime
+    processed_at: UtcDatetime = Field(default_factory=lambda: datetime.now(UTC))
     title: str = Field(min_length=1, max_length=1000)
     content: str = Field(min_length=1, max_length=10000)
     url: str = Field(min_length=1, max_length=2000)
@@ -55,25 +67,30 @@ class RawEnvelope(BaseModel):
     category: str = Field(min_length=1, max_length=100)
     content_hash: str = Field(pattern=r"^[a-f0-9]{64}$")
     storage_policy: StoragePolicy
+    independence_group: str | None = None
+    derived_attributes: dict[str, str] = Field(default_factory=dict)
 
 
 class EventMention(BaseModel):
     model_config = ConfigDict(frozen=True)
     raw_item_id: UUID
     source_id: str
-    published_at: datetime | None
-    received_at: datetime
+    independence_group: str
+    published_at: UtcDatetime | None
+    received_at: UtcDatetime
 
 
 class CanonicalEvent(BaseModel):
     model_config = ConfigDict(frozen=True)
     event_id: UUID = Field(default_factory=uuid4)
     event_version: int = Field(ge=1)
+    version_created_at: UtcDatetime
+    clustering_version: str = Field(min_length=1, max_length=100)
     canonical_title: str
     event_type: str
-    event_time: datetime | None
-    first_received_at: datetime
-    last_updated_at: datetime
+    event_time: UtcDatetime | None
+    first_received_at: UtcDatetime
+    last_updated_at: UtcDatetime
     language: str
     novelty: float = Field(ge=0, le=1)
     source_independence: float = Field(ge=0, le=1)
@@ -86,7 +103,7 @@ class MarketBar(BaseModel):
     model_config = ConfigDict(frozen=True)
     symbol: str = Field(pattern=r"^[A-Z.]{1,12}$")
     timeframe: Literal["1m", "5m", "15m", "1h", "1d"]
-    timestamp: datetime
+    timestamp: UtcDatetime
     open: Decimal = Field(gt=0)
     high: Decimal = Field(gt=0)
     low: Decimal = Field(gt=0)
@@ -100,8 +117,8 @@ class MarketQuote(BaseModel):
     bid: Decimal = Field(gt=0)
     ask: Decimal = Field(gt=0)
     last: Decimal = Field(gt=0)
-    provider_timestamp: datetime
-    received_at: datetime
+    provider_timestamp: UtcDatetime
+    received_at: UtcDatetime
     provider: str
 
 
@@ -109,7 +126,7 @@ class ProviderHealth(BaseModel):
     model_config = ConfigDict(frozen=True)
     name: str
     status: ProviderStatus
-    last_message_at: datetime | None
+    last_message_at: UtcDatetime | None
     freshness_ms: int | None = Field(default=None, ge=0)
     detail: str | None = None
 
@@ -150,7 +167,7 @@ class FeatureSnapshot(BaseModel):
     model_config = ConfigDict(frozen=True)
     snapshot_id: UUID = Field(default_factory=uuid4)
     symbol: str = Field(pattern=r"^[A-Z.]{1,12}$")
-    as_of: datetime
+    as_of: UtcDatetime
     feature_set_version: str
     ret_15m: float = Field(ge=-1, le=1)
     realized_vol_30m: float = Field(ge=0)
@@ -167,12 +184,12 @@ class SignalCandidate(BaseModel):
     analysis_id: UUID
     feature_snapshot_id: UUID
     strategy_version: str
-    as_of: datetime
+    as_of: UtcDatetime
     horizon: Literal["15m", "1h", "4h", "1d"]
     score: float = Field(ge=-1, le=1)
     calibrated_probability: float = Field(ge=0, le=1)
     proposed_action: Action
-    expires_at: datetime
+    expires_at: UtcDatetime
     evidence_ids: tuple[str, ...]
     explanation: str
 
@@ -182,7 +199,7 @@ class RiskDecision(BaseModel):
     risk_decision_id: UUID = Field(default_factory=uuid4)
     signal_id: UUID
     policy_version: str
-    evaluated_at: datetime
+    evaluated_at: UtcDatetime
     approved: bool
     final_action: Action
     size_cap_notional: Decimal = Field(ge=0)
@@ -198,7 +215,7 @@ class PublishedSignal(BaseModel):
     score: float
     confidence: float
     horizon: str
-    as_of: datetime
-    expires_at: datetime
+    as_of: UtcDatetime
+    expires_at: UtcDatetime
     risk: RiskDecision
     summary: str

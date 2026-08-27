@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -8,7 +8,7 @@ from app.providers.replay_market import ReplayMarketDataProvider
 
 @pytest.mark.asyncio
 async def test_replay_provider_returns_typed_quote_and_bars() -> None:
-    clock = lambda: datetime(2026, 8, 26, 12, 0, tzinfo=timezone.utc)
+    clock = lambda: datetime(2026, 8, 26, 12, 0, tzinfo=UTC)
     provider = ReplayMarketDataProvider(clock)
     quote = await provider.latest_quote("acme")
     bars = await provider.bars("ACME", "1m", 3)
@@ -19,7 +19,7 @@ async def test_replay_provider_returns_typed_quote_and_bars() -> None:
 
 @pytest.mark.asyncio
 async def test_cache_reports_stale_quote_and_provider_health() -> None:
-    now = datetime(2026, 8, 26, 12, 0, tzinfo=timezone.utc)
+    now = datetime(2026, 8, 26, 12, 0, tzinfo=UTC)
     current = [now]
     provider = ReplayMarketDataProvider(lambda: current[0])
     service = MarketDataService(provider, lambda: current[0])

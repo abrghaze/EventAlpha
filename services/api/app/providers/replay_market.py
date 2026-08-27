@@ -1,11 +1,10 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator, Callable
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 from decimal import Decimal
 
 from app.contracts import MarketBar, MarketQuote, ProviderHealth, ProviderStatus
-
 
 Clock = Callable[[], datetime]
 
@@ -16,14 +15,14 @@ class ReplayMarketDataProvider:
     name = "replay-market"
 
     def __init__(self, clock: Clock | None = None) -> None:
-        self._clock = clock or (lambda: datetime.now(timezone.utc))
+        self._clock = clock or (lambda: datetime.now(UTC))
         self._last_message_at: datetime | None = None
 
     def _now(self) -> datetime:
         current = self._clock()
         if current.tzinfo is None:
             raise ValueError("Replay clock must return a timezone-aware timestamp")
-        return current.astimezone(timezone.utc)
+        return current.astimezone(UTC)
 
     async def latest_quote(self, symbol: str) -> MarketQuote:
         normalized = symbol.upper()
@@ -32,8 +31,15 @@ class ReplayMarketDataProvider:
         now = self._now()
         self._last_message_at = now
         last = Decimal("101.24") if normalized == "ACME" else Decimal("542.18")
-        return MarketQuote(symbol=normalized, bid=last - Decimal("0.02"), ask=last + Decimal("0.02"),
-                           last=last, provider_timestamp=now, received_at=now, provider=self.name)
+        return MarketQuote(
+            symbol=normalized,
+            bid=last - Decimal("0.02"),
+            ask=last + Decimal("0.02"),
+            last=last,
+            provider_timestamp=now,
+            received_at=now,
+            provider=self.name,
+        )
 
     async def bars(self, symbol: str, timeframe: str, limit: int) -> tuple[MarketBar, ...]:
         if timeframe != "1m":
@@ -47,9 +53,18 @@ class ReplayMarketDataProvider:
         result: list[MarketBar] = []
         for index in range(count):
             close = anchor + Decimal(index) * Decimal("0.08")
-            result.append(MarketBar(symbol=normalized, timeframe="1m", timestamp=now - timedelta(minutes=count - index),
-                                    open=close - Decimal("0.03"), high=close + Decimal("0.05"),
-                                    low=close - Decimal("0.06"), close=close, volume=10_000 + index * 100))
+            result.append(
+                MarketBar(
+                    symbol=normalized,
+                    timeframe="1m",
+                    timestamp=now - timedelta(minutes=count - index),
+                    open=close - Decimal("0.03"),
+                    high=close + Decimal("0.05"),
+                    low=close - Decimal("0.06"),
+                    close=close,
+                    volume=10_000 + index * 100,
+                )
+            )
         return tuple(result)
 
     async def stream_quotes(self, symbols: tuple[str, ...]) -> AsyncIterator[MarketQuote]:
@@ -59,7 +74,17 @@ class ReplayMarketDataProvider:
     async def health(self, now: datetime) -> ProviderHealth:
         if now.tzinfo is None:
             raise ValueError("Health timestamp must be timezone-aware")
-        freshness = None if self._last_message_at is None else max(0, int((now - self._last_message_at).total_seconds() * 1000))
-        return ProviderHealth(name=self.name, status=ProviderStatus.HEALTHY if freshness is not None and freshness <= 15_000 else ProviderStatus.DEGRADED,
-                              last_message_at=self._last_message_at, freshness_ms=freshness,
-                              detail="Deterministic replay provider; no external market coverage.")
+        freshness = (
+            None
+            if self._last_message_at is None
+            else max(0, int((now - self._last_message_at).total_seconds() * 1000))
+        )
+        return ProviderHealth(
+            name=self.name,
+            status=ProviderStatus.HEALTHY
+            if freshness is not None and freshness <= 15_000
+            else ProviderStatus.DEGRADED,
+            last_message_at=self._last_message_at,
+            freshness_ms=freshness,
+            detail="Deterministic replay provider; no external market coverage.",
+        )

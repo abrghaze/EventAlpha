@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.config import Settings
 from app.contracts import AIEventAnalysis, Direction, EventEntity, FeatureSnapshot, PublishedSignal
@@ -10,7 +10,7 @@ from app.domain.signal import create_candidate
 
 def demo_signal(settings: Settings) -> PublishedSignal:
     """Safe replay fixture. It makes no network or broker calls."""
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     event_id = __import__("uuid").uuid4()
     analysis = AIEventAnalysis(
         event_id=event_id,
@@ -21,15 +21,17 @@ def demo_signal(settings: Settings) -> PublishedSignal:
         importance=0.72,
         novelty=0.66,
         uncertainty=0.22,
-        entities=(EventEntity(
-            entity_id="demo-acme",
-            ticker="ACME",
-            direction=Direction.BULLISH,
-            impact=0.68,
-            confidence=0.79,
-            horizons=("1h", "4h"),
-            causal_channels=("guidance",),
-        ),),
+        entities=(
+            EventEntity(
+                entity_id="demo-acme",
+                ticker="ACME",
+                direction=Direction.BULLISH,
+                impact=0.68,
+                confidence=0.79,
+                horizons=("1h", "4h"),
+                causal_channels=("guidance",),
+            ),
+        ),
         evidence_source_ids=("replay-source-001",),
         explanation="Replay fixture generated for local developer experience.",
     )

@@ -4,18 +4,20 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "eventalpha-api"
-version = "0.1.0"
+version = "0.2.0"
 description = "Event-driven trading intelligence research platform"
 requires-python = ">=3.11"
 dependencies = [
   "fastapi>=0.115,<1",
+  "httpx>=0.27,<1",
   "pydantic>=2.7,<3",
+  "psycopg[binary]>=3.2,<4",
+  "sqlalchemy>=2.0,<3",
   "uvicorn[standard]>=0.30,<1",
 ]
 
 [project.optional-dependencies]
 dev = [
-  "httpx>=0.27,<1",
   "pytest>=8,<9",
   "pytest-asyncio>=0.24,<1",
   "ruff>=0.6,<1",
@@ -28,15 +30,15 @@ include = ["app*"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-pythonpath = ["services/api"]
+pythonpath = [".", "services/api"]
 asyncio_mode = "strict"
 
 [tool.ruff]
 line-length = 100
 target-version = "py311"
-src = ["services/api", "tests"]
+src = ["services/api", "services/worker", "scripts", "tests"]
 
 [tool.mypy]
 python_version = "3.11"
 strict = true
-files = ["services/api/app"]
+files = ["services/api/app", "services/worker", "scripts"]

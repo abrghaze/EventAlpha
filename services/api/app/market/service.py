@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from app.contracts import MarketBar, MarketQuote, ProviderHealth, ProviderStatus
 from app.providers.market import MarketDataProvider
@@ -10,23 +10,27 @@ from app.providers.market import MarketDataProvider
 class MarketDataService:
     """Owns latest-value cache and turns provider freshness into explicit state."""
 
-    def __init__(self, provider: MarketDataProvider, clock: Callable[[], datetime] | None = None) -> None:
+    def __init__(
+        self, provider: MarketDataProvider, clock: Callable[[], datetime] | None = None
+    ) -> None:
         self._provider = provider
-        self._clock = clock or (lambda: datetime.now(timezone.utc))
+        self._clock = clock or (lambda: datetime.now(UTC))
         self._latest: dict[str, MarketQuote] = {}
 
     def _now(self) -> datetime:
         current = self._clock()
         if current.tzinfo is None:
             raise ValueError("Market clock must return a timezone-aware timestamp")
-        return current.astimezone(timezone.utc)
+        return current.astimezone(UTC)
 
     async def latest(self, symbol: str) -> MarketQuote:
         quote = await self._provider.latest_quote(symbol)
         self._latest[quote.symbol] = quote
         return quote
 
-    async def bars(self, symbol: str, timeframe: str = "1m", limit: int = 60) -> tuple[MarketBar, ...]:
+    async def bars(
+        self, symbol: str, timeframe: str = "1m", limit: int = 60
+    ) -> tuple[MarketBar, ...]:
         return await self._provider.bars(symbol, timeframe, limit)
 
     def quote_freshness_ms(self, symbol: str) -> int | None:

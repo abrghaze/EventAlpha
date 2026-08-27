@@ -12,8 +12,34 @@ services:
     volumes:
       - .:/workspace
     depends_on:
+      worker-fast:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+  migrate:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+    command: python scripts/apply_migrations.py
+    env_file: .env
+    environment:
+      PYTHONPATH: /workspace/services/api
+    depends_on:
       postgres:
         condition: service_healthy
+  worker-fast:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+    command: python services/worker/event_worker.py
+    env_file: .env
+    environment:
+      PYTHONPATH: /workspace/services/api
+    volumes:
+      - .:/workspace
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
       redis:
         condition: service_started
   postgres:
