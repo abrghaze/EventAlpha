@@ -41,3 +41,15 @@ def test_configured_sec_source_requires_policy_user_agent(
     monkeypatch.delenv("SEC_USER_AGENT", raising=False)
     with pytest.raises(RuntimeError, match="SEC_USER_AGENT"):
         Settings.from_environment()
+
+
+def test_replay_clock_requires_utc_offset(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("EVENTALPHA_REPLAY_AT", "2026-08-27T12:00:00")
+    with pytest.raises(RuntimeError, match="must include a timezone"):
+        Settings.from_environment()
+
+
+def test_market_poll_interval_must_be_positive(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("EVENTALPHA_MARKET_POLL_SECONDS", "0")
+    with pytest.raises(RuntimeError, match="must be positive"):
+        Settings.from_environment()

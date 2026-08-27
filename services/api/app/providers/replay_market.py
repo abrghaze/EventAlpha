@@ -3,6 +3,7 @@ from __future__ import annotations
 from collections.abc import AsyncIterator, Callable
 from datetime import UTC, datetime, timedelta
 from decimal import Decimal
+from uuid import NAMESPACE_URL, uuid5
 
 from app.contracts import MarketBar, MarketQuote, ProviderHealth, ProviderStatus
 
@@ -31,13 +32,18 @@ class ReplayMarketDataProvider:
         now = self._now()
         self._last_message_at = now
         last = Decimal("101.24") if normalized == "ACME" else Decimal("542.18")
+        native_id = f"{normalized}:{now.isoformat()}"
         return MarketQuote(
+            id=uuid5(NAMESPACE_URL, f"eventalpha:quote:{native_id}"),
+            trace_id=uuid5(NAMESPACE_URL, f"eventalpha:quote-trace:{native_id}"),
             symbol=normalized,
+            native_id=native_id,
             bid=last - Decimal("0.02"),
             ask=last + Decimal("0.02"),
             last=last,
             provider_timestamp=now,
             received_at=now,
+            processed_at=now,
             provider=self.name,
         )
 
@@ -47,22 +53,34 @@ class ReplayMarketDataProvider:
         normalized = symbol.upper()
         if normalized not in {"ACME", "SPY"}:
             raise KeyError(normalized)
-        now = self._now().replace(second=0, microsecond=0)
+        received_at = self._now()
+        now = received_at.replace(second=0, microsecond=0)
         anchor = Decimal("100.00") if normalized == "ACME" else Decimal("540.00")
         count = min(max(limit, 1), 1000)
         result: list[MarketBar] = []
         for index in range(count):
-            close = anchor + Decimal(index) * Decimal("0.08")
+            timestamp = now - timedelta(minutes=count - index)
+            minute_bucket = int(timestamp.timestamp() // 60) % 100
+            close = anchor + Decimal(minute_bucket) * Decimal("0.08")
+            native_id = f"{normalized}:1m:{timestamp.isoformat()}"
             result.append(
                 MarketBar(
+                    id=uuid5(NAMESPACE_URL, f"eventalpha:bar:{native_id}"),
+                    trace_id=uuid5(NAMESPACE_URL, f"eventalpha:bar-trace:{native_id}"),
+                    provider=self.name,
+                    native_id=native_id,
                     symbol=normalized,
                     timeframe="1m",
-                    timestamp=now - timedelta(minutes=count - index),
+                    timestamp=timestamp,
+                    bar_end_at=timestamp + timedelta(minutes=1),
+                    provider_updated_at=received_at,
+                    received_at=received_at,
+                    processed_at=received_at,
                     open=close - Decimal("0.03"),
                     high=close + Decimal("0.05"),
                     low=close - Decimal("0.06"),
                     close=close,
-                    volume=10_000 + index * 100,
+                    volume=10_000 + minute_bucket * 100,
                 )
             )
         return tuple(result)

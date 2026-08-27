@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from os import getenv
 
 
@@ -10,6 +11,13 @@ def _bool(name: str, default: bool) -> bool:
 
 def _csv(name: str) -> tuple[str, ...]:
     return tuple(value.strip() for value in getenv(name, "").split(",") if value.strip())
+
+
+def _positive_float(name: str, default: float) -> float:
+    value = float(getenv(name, str(default)))
+    if value <= 0:
+        raise RuntimeError(f"{name} must be positive")
+    return value
 
 
 @dataclass(frozen=True, slots=True)
@@ -34,6 +42,16 @@ def _official_feeds() -> tuple[OfficialRssFeedSettings, ...]:
     return tuple(feeds)
 
 
+def _optional_utc_datetime(name: str) -> datetime | None:
+    value = getenv(name, "").strip()
+    if not value:
+        return None
+    parsed = datetime.fromisoformat(value)
+    if parsed.tzinfo is None or parsed.utcoffset() is None:
+        raise RuntimeError(f"{name} must include a timezone")
+    return parsed.astimezone(UTC)
+
+
 @dataclass(frozen=True, slots=True)
 class Settings:
     environment: str
@@ -47,6 +65,8 @@ class Settings:
     official_rss_feeds: tuple[OfficialRssFeedSettings, ...] = ()
     sec_ciks: tuple[str, ...] = ()
     fred_series_ids: tuple[str, ...] = ()
+    replay_at: datetime | None = None
+    market_poll_seconds: float = 5.0
 
     @classmethod
     def from_environment(cls) -> Settings:
@@ -80,4 +100,6 @@ class Settings:
             official_rss_feeds=official_rss_feeds,
             sec_ciks=sec_ciks,
             fred_series_ids=fred_series_ids,
+            replay_at=_optional_utc_datetime("EVENTALPHA_REPLAY_AT"),
+            market_poll_seconds=_positive_float("EVENTALPHA_MARKET_POLL_SECONDS", 5.0),
         )

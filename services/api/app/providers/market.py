@@ -7,6 +7,14 @@ from typing import Protocol
 from app.contracts import MarketBar, MarketQuote, ProviderHealth
 
 
+class MarketProviderError(RuntimeError):
+    """Base error raised after a market adapter normalizes a vendor failure."""
+
+
+class TransientMarketProviderError(MarketProviderError):
+    """A retryable provider transport, timeout, throttling, or upstream failure."""
+
+
 class MarketDataProvider(Protocol):
     """Vendor adapters map their payloads here before reaching domain code."""
 

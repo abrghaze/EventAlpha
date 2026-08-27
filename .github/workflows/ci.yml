@@ -49,6 +49,7 @@ jobs:
       EVENTALPHA_DATABASE_URL: postgresql+psycopg://eventalpha:eventalpha@127.0.0.1:5432/eventalpha
       EVENTALPHA_ENV: ci
       EVENTALPHA_DEMO_MODE: true
+      EVENTALPHA_REPLAY_AT: "2026-08-27T16:40:00+00:00"
     steps:
       - uses: actions/checkout@v7
       - run: docker build -f infra/docker/api.Dockerfile -t eventalpha-api:test .
@@ -56,6 +57,8 @@ jobs:
       - run: docker run --rm --network host -e EVENTALPHA_DATABASE_URL -e EVENTALPHA_ENV -e EVENTALPHA_DEMO_MODE eventalpha-api:test python scripts/apply_migrations.py
       - run: docker run --rm --network host -e EVENTALPHA_DATABASE_URL -e EVENTALPHA_ENV -e EVENTALPHA_DEMO_MODE eventalpha-api:test python services/worker/event_worker.py
       - run: docker run --rm --network host -e EVENTALPHA_DATABASE_URL -e EVENTALPHA_ENV -e EVENTALPHA_DEMO_MODE eventalpha-api:test python services/worker/event_worker.py
+      - run: docker run --rm --network host -e EVENTALPHA_DATABASE_URL -e EVENTALPHA_ENV -e EVENTALPHA_DEMO_MODE -e EVENTALPHA_REPLAY_AT eventalpha-api:test python services/worker/market_worker.py
+      - run: docker run --rm --network host -e EVENTALPHA_DATABASE_URL -e EVENTALPHA_ENV -e EVENTALPHA_DEMO_MODE -e EVENTALPHA_REPLAY_AT eventalpha-api:test python services/worker/market_worker.py
       - run: docker run --rm --network host -e EVENTALPHA_DATABASE_URL -e EVENTALPHA_ENV -e EVENTALPHA_DEMO_MODE eventalpha-api:test python scripts/runtime_smoke.py
       - name: Smoke default Uvicorn command
         run: |

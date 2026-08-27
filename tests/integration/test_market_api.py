@@ -10,8 +10,14 @@ def test_market_api_exposes_bars_quote_and_health() -> None:
     health = client.get("/api/v1/providers/health")
     assert bars.status_code == 200
     assert len(bars.json()["data"]) == 3
+    assert bars.json()["source"] == "replay-market"
+    assert bars.json()["storage"] == "ephemeral"
+    assert bars.json()["bar_freshness_ms"] is not None
+    assert not bars.json()["stale"]
     assert snapshot.json()["quote"]["symbol"] == "ACME"
     assert snapshot.json()["quote_freshness_ms"] is not None
+    assert snapshot.json()["source"] == "replay-market"
+    assert snapshot.json()["storage"] == "ephemeral"
     assert health.json()["providers"][0]["status"] == "healthy"
 
 

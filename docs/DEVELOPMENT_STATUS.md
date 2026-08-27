@@ -8,8 +8,7 @@ Updated: 2026-08-27
 - Added ignore policies and environment-variable-only configuration template.
 - Recorded ADR-001 and the implementation plan.
 - Created FastAPI contracts, replay-only event-to-signal-to-risk path, minimal Next.js shell, Compose setup, CI and tests.
-- Completed Phase 1: a provider-neutral market adapter contract, deterministic replay market provider, typed OHLCV/quote contracts, in-process latest-value cache, explicit freshness health, market worker entry point, bars/snapshot/health API endpoints, and replay-aware Live Market/Data Health views.
-- Phase 1 verification passed: 9 Python tests; API behavior checks; replay worker refresh for ACME/SPY; and Next.js production build with route/type generation.
+- Completed Phase 1: provider-neutral market contracts, deterministic replay ingestion, durable append-only quote/bar observations and revisions, point-in-time reads, persist-before-publish projection, separate market-age and ingestion-heartbeat freshness, bounded reconnect/backoff, idle-stream detection, advisory-lease worker ownership, and a gap-aware Live Market chart.
 - Completed the Phase 2 event-ingestion foundation: timestamped/licensing-aware raw envelopes, provider-neutral event adapter, deterministic normalisation, content fingerprinting, native-ID idempotency, exact/near-title clustering, canonical-event/mention contracts, replay event worker, event APIs, and Event Radar.
 - Phase 2 foundation verification passed: 13 Python tests; three replay source items formed two canonical events with the syndicated earnings item clustered into two mentions; and the Next.js production build generated seven routes.
 - The first remote CI run identified CI configuration issues: ambiguous setuptools monorepo discovery and a secret-scan base equal to HEAD. Package discovery is now explicitly scoped to `services/api`, the scan uses the event-derived commit range, and CI now includes a clean npm dashboard build.
@@ -19,23 +18,25 @@ Updated: 2026-08-27
 - Added SQLAlchemy source/raw-event/canonical-event/mention persistence, source types and neutral priors, UTC processing timestamps, append-only version history, historical lineage reconstruction, and restart-safe idempotency indexes.
 - Added checksummed transactional migrations that reject incompatible/unversioned schemas, PostgreSQL migration and ingestion advisory locks, database-aware health, non-blocking API refresh, and migration -> ingestion -> API Compose readiness ordering.
 - CI now repeats migration and replay ingestion against PostgreSQL, asserts schema/count invariants, runs an in-image ASGI smoke, and boots the image through its default Uvicorn command.
-- Current local verification passes 43 Python tests, Ruff formatting/lint, strict mypy, bytecode compilation, replay-worker acceptance, and the seven-route Next.js production build.
+- Remote CI for the durable event-foundation milestone passed all API, web, PostgreSQL container, and secret-scan jobs.
+- Current local verification passes 61 Python tests, Ruff formatting/lint, strict mypy, bytecode compilation, both replay-worker acceptance checks, YAML parsing, and the seven-route Next.js production build.
 - Enforced Phase 0 safety: live configuration raises at startup and replay makes no provider, OpenAI or broker calls.
 
 ## In progress
 
-- Final remote CI verification of the durable event-foundation milestone.
+- Final remote CI verification of the durable market-data milestone.
 
 ## Remaining
 
-- Durable historical market-bar/quote storage and reconnect behavior; licensed production news and ALFRED vintages; OpenAI client/evals; quant storage/calibration; full risk policies; backtesting; paper broker; RBAC; and cloud hardening.
+- Licensed production market/news adapters and ALFRED vintages; OpenAI client/evals; quant storage/calibration; full risk policies; backtesting; paper broker; RBAC; and cloud hardening.
 
 ## Known limitations
 
 - Docker CLI is absent on this machine, so Compose cannot be run here.
 - Credentials, licences, budgets, cloud and identity choices are absent by design and not Phase 0 blockers.
-- Configured adapters perform one bounded ingestion pass; continuous Redis Stream scheduling and persisted provider-health history remain future operational work.
+- The market provider is deterministic replay only; no licensed production market adapter is configured.
+- Configured event adapters perform one bounded ingestion pass; continuous Redis Stream scheduling remains future operational work.
 
 ## Next milestone
 
-Close the remaining market-data-foundation definition of done with durable historical bar/quote persistence and reconnect-safe ingestion, then begin Phase 3 structured OpenAI event intelligence and gold-set evaluation.
+Begin Phase 3 structured OpenAI event intelligence, model telemetry, and gold-set evaluation while keeping deterministic HOLD/AVOID degradation when AI is unavailable.

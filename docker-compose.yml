@@ -14,6 +14,8 @@ services:
     depends_on:
       worker-fast:
         condition: service_completed_successfully
+      market-seed:
+        condition: service_completed_successfully
       redis:
         condition: service_started
   migrate:
@@ -39,6 +41,37 @@ services:
       - .:/workspace
     depends_on:
       migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+  market-seed:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+    command: python services/worker/market_worker.py
+    env_file: .env
+    environment:
+      PYTHONPATH: /workspace/services/api
+    volumes:
+      - .:/workspace
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+      redis:
+        condition: service_started
+  worker-market:
+    build:
+      context: .
+      dockerfile: infra/docker/api.Dockerfile
+    command: python services/worker/market_worker.py --continuous
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      PYTHONPATH: /workspace/services/api
+    volumes:
+      - .:/workspace
+    depends_on:
+      market-seed:
         condition: service_completed_successfully
       redis:
         condition: service_started

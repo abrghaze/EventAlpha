@@ -4,7 +4,7 @@ EventAlpha is an evidence-driven, event-based trading intelligence and research 
 
 ## Current milestone
 
-Phase 0 is complete. The replay market spine and the durable Phase 2 event-foundation vertical slice are implemented: typed FastAPI contracts, replay-only event-to-signal-to-risk, provider-neutral market bars/quotes/freshness, time-preserving raw event envelopes, bounded duplicate clustering, source lineage/priors, append-only canonical event versions, Event Radar, worker entry points, PostgreSQL migrations, Docker Compose setup, and CI.
+Phases 0-2 are complete. EventAlpha now has a durable replay market spine and event foundation: provider-neutral bars and quotes, append-only corrections, point-in-time reads, freshness and reconnect state, time-preserving raw event envelopes, bounded duplicate clustering, source lineage and priors, append-only canonical event versions, Event Radar, PostgreSQL migrations, workers, Docker Compose, and CI.
 
 Live trading is unsupported. Setting `EVENTALPHA_LIVE_TRADING_ENABLED=true` makes the API fail fast.
 
@@ -16,15 +16,15 @@ Live trading is unsupported. Setting `EVENTALPHA_LIVE_TRADING_ENABLED=true` make
 4. Start the API: `uvicorn app.main:app --app-dir services/api --reload`.
 5. Check `http://127.0.0.1:8000/api/v1/health` and `http://127.0.0.1:8000/api/v1/signals`.
 
-For persistent mode, set `EVENTALPHA_DATABASE_URL`, run `python scripts/apply_migrations.py`, then run `python services/worker/event_worker.py` before starting the API. Migration files are checksummed and immutable; the runner refuses to silently adopt an unversioned or incompatible schema.
+For persistent mode, set `EVENTALPHA_DATABASE_URL`, run `python scripts/apply_migrations.py`, then run both `python services/worker/event_worker.py` and `python services/worker/market_worker.py` before starting the API. Add `--continuous` to the market worker for bounded polling with reconnect and heartbeat tracking. Migration files are checksummed and immutable; the runner refuses to silently adopt an unversioned or incompatible schema.
 
-The replay market endpoints are `GET /api/v1/assets/ACME/bars`, `GET /api/v1/assets/ACME/snapshot`, and `GET /api/v1/providers/health`. They explicitly return `source: replay`; they are not live market data.
+The market endpoints are `GET /api/v1/assets/ACME/bars`, `GET /api/v1/assets/ACME/snapshot`, and `GET /api/v1/providers/health`. They support timezone-aware `as_of` reads in persistent mode and distinguish provider identity (`source: replay-market`) from storage mode (`persistent` or `ephemeral`). Quote age uses provider time, while provider health separately measures ingestion heartbeat freshness. The data is deterministic replay, not live market data.
 
 The replay event endpoints are `GET /api/v1/events`, `GET /api/v1/events/{id}`, and `GET /api/v1/events/{id}/versions/{version}`. The fixture intentionally includes a syndicated duplicate, which produces one canonical earnings event with two mentions while retaining its historical first version.
 
 Phase 2 also includes contract-tested adapters for official RSS, SEC EDGAR submissions, and FRED observations. Replay is the default. Set `EVENTALPHA_EVENT_SOURCE_MODE=configured`, then provide one or more `EVENTALPHA_OFFICIAL_RSS_FEEDS`, `EVENTALPHA_SEC_CIKS`, or `EVENTALPHA_FRED_SERIES_IDS` values and the required `SEC_USER_AGENT`/`FRED_API_KEY`. RSS entries use `source_id|category|url` and are separated with semicolons. Normalized events persist transactionally to the source, raw-item, canonical-event-version, and mention schema. PostgreSQL advisory leases enforce one migration owner and one active event-ingestion worker.
 
-Docker Compose is available after installing Docker: `docker compose up --build`. It waits for PostgreSQL, applies migrations, completes the initial ingestion pass, and only then starts the API. CI repeats migrations and ingestion to prove idempotency, checks PostgreSQL schema/count invariants, and starts the built image through its default Uvicorn command.
+Docker Compose is available after installing Docker: `docker compose up --build`. It waits for PostgreSQL, applies migrations, completes the initial event and market ingestion passes, starts the API, and retains one leased continuous market worker. CI repeats migrations and both workers to prove idempotency, checks PostgreSQL schema/count/API invariants, and starts the built image through its default Uvicorn command.
 
 ## Documentation
 

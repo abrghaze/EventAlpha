@@ -1,9 +1,8 @@
 import sqlite3
-from hashlib import sha256
 from pathlib import Path
 
 import pytest
-from scripts.apply_migrations import apply_migrations
+from scripts.apply_migrations import apply_migrations, migration_checksum
 from sqlalchemy import create_engine, inspect, text
 
 
@@ -22,24 +21,34 @@ def test_migration_runner_applies_each_version_exactly_once(tmp_path: Path) -> N
     database_url = f"sqlite+pysqlite:///{database}"
     migrations = Path(__file__).parents[2] / "migrations" / "versions"
 
-    assert apply_migrations(database_url, migrations) == ("0001_event_foundation.sql",)
+    assert apply_migrations(database_url, migrations) == (
+        "0001_event_foundation.sql",
+        "0002_market_observations.sql",
+    )
     assert apply_migrations(database_url, migrations) == ()
 
     engine = create_engine(database_url)
     try:
-        assert "schema_migrations" in inspect(engine).get_table_names()
+        assert {
+            "schema_migrations",
+            "providers",
+            "instruments",
+            "market_quote_observations",
+            "market_bar_observations",
+            "provider_state",
+        } <= set(inspect(engine).get_table_names())
         with engine.connect() as connection:
             assert (
-                connection.execute(text("SELECT COUNT(*) FROM schema_migrations")).scalar_one() == 1
+                connection.execute(text("SELECT COUNT(*) FROM schema_migrations")).scalar_one() == 2
             )
             version, checksum = connection.execute(
-                text("SELECT version, checksum FROM schema_migrations")
+                text(
+                    "SELECT version, checksum FROM schema_migrations "
+                    "WHERE version = '0001_event_foundation.sql'"
+                )
             ).one()
             assert version == "0001_event_foundation.sql"
-            assert (
-                checksum
-                == sha256((migrations / "0001_event_foundation.sql").read_bytes()).hexdigest()
-            )
+            assert checksum == migration_checksum(migrations / "0001_event_foundation.sql")
     finally:
         engine.dispose()
 

@@ -3,10 +3,10 @@ from __future__ import annotations
 from datetime import UTC, datetime
 from decimal import Decimal
 from enum import StrEnum
-from typing import Annotated, Literal
+from typing import Annotated, Literal, Self
 from uuid import UUID, uuid4
 
-from pydantic import AfterValidator, BaseModel, ConfigDict, Field
+from pydantic import AfterValidator, BaseModel, ConfigDict, Field, model_validator
 
 
 def _as_utc(value: datetime) -> datetime:
@@ -16,6 +16,7 @@ def _as_utc(value: datetime) -> datetime:
 
 
 UtcDatetime = Annotated[datetime, AfterValidator(_as_utc)]
+MarketTimeframe = Literal["1m", "5m", "15m", "1h", "1d"]
 
 
 class Action(StrEnum):
@@ -101,25 +102,56 @@ class MarketBar(BaseModel):
     """Provider-neutral OHLCV bar; all timestamps are UTC-aware at boundaries."""
 
     model_config = ConfigDict(frozen=True)
+    id: UUID = Field(default_factory=uuid4)
+    trace_id: UUID = Field(default_factory=uuid4)
+    provider: str = Field(min_length=1, max_length=100)
+    native_id: str | None = Field(default=None, max_length=500)
     symbol: str = Field(pattern=r"^[A-Z.]{1,12}$")
-    timeframe: Literal["1m", "5m", "15m", "1h", "1d"]
+    timeframe: MarketTimeframe
     timestamp: UtcDatetime
+    bar_end_at: UtcDatetime
+    provider_updated_at: UtcDatetime | None = None
+    received_at: UtcDatetime
+    processed_at: UtcDatetime
+    is_final: bool = True
     open: Decimal = Field(gt=0)
     high: Decimal = Field(gt=0)
     low: Decimal = Field(gt=0)
     close: Decimal = Field(gt=0)
-    volume: int = Field(ge=0)
+    volume: int | None = Field(default=None, ge=0)
+
+    @model_validator(mode="after")
+    def validate_ohlc_bounds(self) -> Self:
+        if self.bar_end_at <= self.timestamp:
+            raise ValueError("bar end must be later than bar start")
+        if self.high < max(self.open, self.close) or self.low > min(self.open, self.close):
+            raise ValueError("OHLC high/low bounds are inconsistent")
+        if self.high < self.low:
+            raise ValueError("OHLC high must be greater than or equal to low")
+        return self
 
 
 class MarketQuote(BaseModel):
     model_config = ConfigDict(frozen=True)
+    id: UUID = Field(default_factory=uuid4)
+    trace_id: UUID = Field(default_factory=uuid4)
     symbol: str = Field(pattern=r"^[A-Z.]{1,12}$")
-    bid: Decimal = Field(gt=0)
-    ask: Decimal = Field(gt=0)
-    last: Decimal = Field(gt=0)
-    provider_timestamp: UtcDatetime
+    native_id: str | None = Field(default=None, max_length=500)
+    bid: Decimal | None = Field(default=None, gt=0)
+    ask: Decimal | None = Field(default=None, gt=0)
+    last: Decimal | None = Field(default=None, gt=0)
+    provider_timestamp: UtcDatetime | None
     received_at: UtcDatetime
+    processed_at: UtcDatetime
     provider: str
+
+    @model_validator(mode="after")
+    def validate_spread(self) -> Self:
+        if self.bid is not None and self.ask is not None and self.bid > self.ask:
+            raise ValueError("quote bid must be less than or equal to ask")
+        if self.bid is None and self.ask is None and self.last is None:
+            raise ValueError("quote must contain at least one price")
+        return self
 
 
 class ProviderHealth(BaseModel):
